@@ -1,105 +1,227 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Race Session Dashboard</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" href="css/animations.css" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple Race — 7 Teams</title>
+<style>
+  :root {
+    --line:#e5e7eb; --bg:#ffffff; --text:#111827; --muted:#6b7280; --accent:#2563eb;
+    --lane:#f9fafb; --track:#1f3346; --pit:#fef3c7; --pitb:#f59e0b;
+  }
+  *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+  header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;z-index:5}
+  header .row{display:flex;gap:16px;align-items:center;justify-content:space-between}
+  .controls button{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+  .controls button:hover{border-color:var(--accent)}
+  main{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:16px}
+  @media(max-width:960px){main{grid-template-columns:1fr}}
+  /* Трек + дорожки */
+  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+  .track{position:relative; padding:10px 10px 6px 10px}
+  .lane{position:relative;height:58px;margin:10px 0;background:var(--lane);border:1px dashed var(--line);border-radius:12px;overflow:hidden}
+  .lane-label{position:absolute;left:8px;top:8px;font-weight:600;color:var(--text);font-size:14px}
+  .lane .car{position:absolute;left:0;top:50%;transform:translate(-50%,-50%); /* -50% чтобы «нос» ровнялся по прогрессу */
+             display:flex;align-items:center;gap:6px;transition:left 300ms linear}
+  .car .icon{width:36px;height:24px;border-radius:4px;display:inline-block}
+  .car .num{position:absolute;left:10px;top:3px;color:#fff;font-weight:700;font-size:12px;text-shadow:0 1px 1px rgba(0,0,0,.4)}
+  .car .meta{font-size:12px;color:var(--muted)}
+  .pit{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:60px;height:36px;background:var(--pit);
+       border:2px solid var(--pitb);border-radius:8px;opacity:.85}
+  /* Этапы */
+  .stages{display:flex;gap:6px;align-items:center}
+  .stage-dot{width:12px;height:12px;border-radius:50%;background:#e5e7eb}
+  .stage-dot.active{background:#10b981}
+  /* Лидерборд */
+  aside.panel h3{margin:8px 0 10px}
+  .leader{list-style:none;margin:0;padding:0}
+  .leader li{display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px dashed var(--line)}
+  .badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;font-size:12px;margin-right:6px}
+  .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .quick button{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
+  .quick button:hover{border-color:var(--accent)}
+  .muted{color:var(--muted)}
+  /* Пит-стоп эффект */
+  @keyframes pitPulse{0%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.08)}100%{transform:translate(-50%,-50%) scale(1)}}
+  .car.pit{animation:pitPulse 700ms ease-in-out}
+</style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="session-info">
-      <div class="timer">
-        <strong>Сессия:</strong> <span id="session-timer">60:00</span>
+<header>
+  <div class="row">
+    <div style="display:flex;gap:16px;align-items:center">
+      <div><strong>Сессия:</strong> <span id="t-session">60:00</span></div>
+      <div class="stages"><strong style="margin-right:6px">Этап:</strong>
+        <div id="s1" class="stage-dot active"></div>
+        <div id="s2" class="stage-dot"></div>
+        <div id="s3" class="stage-dot"></div>
+        <div id="s4" class="stage-dot"></div>
       </div>
-      <div class="stage">
-        <strong>Этап:</strong> <span id="stage-indicator">1 / 4</span>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="reduced-motion-toggle" />
-        <span>Упростить анимацию</span>
-      </label>
     </div>
     <div class="controls">
-      <button id="btn-start">▶ Старт</button>
-      <button id="btn-pause">⏸ Пауза</button>
-      <button id="btn-reset">🔄 Сброс</button>
-      <button id="btn-next-stage">⏭ Следующий этап</button>
+      <button id="start">▶ Старт</button>
+      <button id="pause">⏸ Пауза</button>
+      <button id="next">⏭ Следующий этап</button>
+      <button id="reset">🔄 Сброс</button>
     </div>
-  </header>
+  </div>
+</header>
 
-  <main class="layout">
-    <section class="track-panel">
-      <!-- SVG Трасса с 4 контрольными точками -->
-      <svg id="track-svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id="trackGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#2c3e50" />
-            <stop offset="100%" stop-color="#34495e" />
-          </linearGradient>
-          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
-          </filter>
-        </defs>
+<main>
+  <section class="panel">
+    <h3 style="margin:0 0 8px">Трасса</h3>
+    <div class="track" id="track">
+      <!-- 7 дорожек генерируются скриптом -->
+    </div>
+    <div class="muted" style="font-size:12px;margin-top:6px">Подсказка: клик по болиду = пит-стоп (+10)</div>
+  </section>
 
-        <!-- Овальная трасса (параметрический путь) -->
-        <path id="trackPath"
-              d="M 150 300
-                 C 150 150, 1050 150, 1050 300
-                 C 1050 450, 150 450, 150 300 Z"
-              fill="none"
-              stroke="url(#trackGrad)"
-              stroke-width="30"
-              stroke-linecap="round"
-              filter="url(#shadow)" />
+  <aside class="panel">
+    <h3>Лидерборд</h3>
+    <ol id="leader" class="leader"></ol>
+    <div class="quick">
+      <button data-team="1">+5 T1</button><button data-team="2">+5 T2</button><button data-team="3">+5 T3</button>
+      <button data-team="4">+5 T4</button><button data-team="5">+5 T5</button><button data-team="6">+5 T6</button>
+      <button data-team="7">+5 T7</button>
+    </div>
+    <p class="muted" style="margin-top:8px">Очки → позиция на дорожке. Дошёл до 100% — полный круг, счётчик «laps» растёт.</p>
+  </aside>
+</main>
 
-        <!-- Контрольные точки этапов (1-4) -->
-        <g id="stage-markers"></g>
+<script>
+(function(){
+  // ====== ДАННЫЕ ======
+  const model = {
+    duration: 60*60,    // 60 минут
+    time: 0,            // секунды
+    running: false,
+    stage: 1,
+    stages: 4,
+    maxPointsPerLap: 100,  // 100 очков = полный круг
+    teams: [
+      {id:1,name:'Team 1',color:'#ef4444',points:0,laps:0},
+      {id:2,name:'Team 2',color:'#2563eb',points:0,laps:0},
+      {id:3,name:'Team 3',color:'#10b981',points:0,laps:0},
+      {id:4,name:'Team 4',color:'#f59e0b',points:0,laps:0},
+      {id:5,name:'Team 5',color:'#8b5cf6',points:0,laps:0},
+      {id:6,name:'Team 6',color:'#14b8a6',points:0,laps:0},
+      {id:7,name:'Team 7',color:'#e11d48',points:0,laps:0},
+    ],
+  };
 
-        <!-- Пит-стоп зоны (слева и справа) -->
-        <g id="pit-zones">
-          <rect class="pit-zone" x="80" y="240" width="120" height="120" rx="10"/>
-          <rect class="pit-zone" x="1000" y="240" width="120" height="120" rx="10"/>
-        </g>
+  // ====== РЕНДЕР ДОРОЖЕК ======
+  const track = document.getElementById('track');
+  function renderLanes(){
+    track.innerHTML = '';
+    model.teams.forEach(t=>{
+      const lane = document.createElement('div'); lane.className='lane'; lane.dataset.team=t.id;
+      const label = document.createElement('div'); label.className='lane-label'; label.innerHTML =
+        `<span class="badge" style="background:${t.color}">${t.id}</span> ${t.name}`;
+      const pit = document.createElement('div'); pit.className='pit';
+      const car = document.createElement('div'); car.className='car'; car.dataset.team=t.id;
+      const icon = document.createElement('span'); icon.className='icon'; icon.style.background=t.color;
+      const num = document.createElement('span'); num.className='num'; num.textContent=t.id;
+      const meta = document.createElement('span'); meta.className='meta'; meta.textContent='0 pts • 0 laps';
+      car.appendChild(icon); car.appendChild(num); car.appendChild(meta);
+      // клик по болиду = пит-стоп бонус
+      car.addEventListener('click', ()=>{ addPoints(t.id, 10); pitEffect(t.id); });
 
-        <!-- Слой болидов -->
-        <g id="cars-layer"></g>
-      </svg>
+      lane.appendChild(label); lane.appendChild(pit); lane.appendChild(car);
+      track.appendChild(lane);
+    });
+  }
 
-      <!-- Зона карточек лицензий (Drag-and-Drop заглушка) -->
-      <div class="licenses">
-        <div class="license" draggable="true" data-type="tires">Лицензия: Шины +10</div>
-        <div class="license" draggable="true" data-type="fuel">Лицензия: Топливо +10</div>
-        <div class="license" draggable="true" data-type="goldnut">Бонус: Золотая гайка +20</div>
-      </div>
-    </section>
+  // ====== ОБНОВЛЕНИЕ ПОЗИЦИЙ ======
+  function setCarPosition(team){
+    const lane = track.querySelector(`.lane[data-team="${team.id}"]`);
+    const car  = lane.querySelector('.car');
+    const pct  = (team.points % model.maxPointsPerLap) / model.maxPointsPerLap * 100; // 0..100
+    car.style.left = pct + '%';
+    const laps = Math.floor(team.points / model.maxPointsPerLap);
+    team.laps = laps;
+    lane.querySelector('.meta').textContent = `${team.points} pts • ${team.laps} laps`;
+  }
+  function updateAll(){
+    model.teams.forEach(setCarPosition);
+    renderLeaderboard();
+    updateHeader();
+  }
 
-    <aside class="sidebar">
-      <h3>Лидерборд</h3>
-      <ol id="leaderboard" class="leaderboard"></ol>
+  // ====== ЛИДЕРБОРД ======
+  const leader = document.getElementById('leader');
+  function renderLeaderboard(){
+    const sorted = [...model.teams].sort((a,b)=>{
+      // сортируем по общему прогрессу: laps*100 + остаток
+      const ap = a.laps*100 + (a.points % model.maxPointsPerLap);
+      const bp = b.laps*100 + (b.points % model.maxPointsPerLap);
+      return bp - ap;
+    });
+    leader.innerHTML = '';
+    sorted.forEach((t, i)=>{
+      const li = document.createElement('li');
+      li.innerHTML = `<span><span class="badge" style="background:${t.color}">${i+1}</span> <strong>${t.name}</strong></span>
+                      <span>${t.points} pts</span>`;
+      leader.appendChild(li);
+    });
+  }
 
-      <h4>Технические события</h4>
-      <div id="event-log" class="event-log"></div>
+  // ====== ВРЕМЯ/ЭТАПЫ ======
+  const tEl = document.getElementById('t-session');
+  function updateHeader(){
+    const remain = Math.max(0, model.duration - Math.floor(model.time));
+    const mm = String(Math.floor(remain/60)).padStart(2,'0');
+    const ss = String(remain%60).padStart(2,'0');
+    tEl.textContent = `${mm}:${ss}`;
+    for(let i=1;i<=model.stages;i++){
+      const el = document.getElementById('s'+i);
+      if(!el) continue;
+      el.classList.toggle('active', i<=model.stage);
+    }
+  }
 
-      <div class="quick-actions">
-        <button data-team="1" class="add-points">+5 Team 1</button>
-        <button data-team="2" class="add-points">+5 Team 2</button>
-        <button data-team="3" class="add-points">+5 Team 3</button>
-        <button data-team="4" class="add-points">+5 Team 4</button>
-        <button data-team="5" class="add-points">+5 Team 5</button>
-        <button data-team="6" class="add-points">+5 Team 6</button>
-        <button data-team="7" class="add-points">+5 Team 7</button>
-      </div>
-    </aside>
-  </main>
+  // ====== ОЧКИ / ДЕЙСТВИЯ ======
+  function addPoints(teamId, delta){
+    const t = model.teams.find(x=>x.id===teamId); if(!t) return;
+    t.points = Math.max(0, t.points + delta);
+    setCarPosition(t); renderLeaderboard();
+  }
+  function pitEffect(teamId){
+    const car = track.querySelector(`.lane[data-team="${teamId}"] .car`);
+    car.classList.remove('pit'); void car.offsetWidth; car.classList.add('pit');
+  }
 
-  <footer class="footer">
-    <small>Race Session Dashboard • v1 • Vanilla JS</small>
-  </footer>
+  // Быстрые +5
+  document.querySelectorAll('.quick button').forEach(b=>{
+    b.addEventListener('click', ()=> addPoints(+b.dataset.team, 5));
+  });
 
-  <!-- Точка входа ES-модулей -->
-  <script type="module" src="js/app.js"></script>
-  <noscript>Для работы дашборда включите JavaScript.</noscript>
+  // Контролы
+  document.getElementById('start').onclick = ()=> model.running = true;
+  document.getElementById('pause').onclick = ()=> model.running = false;
+  document.getElementById('next').onclick  = ()=> { model.stage = Math.min(model.stages, model.stage+1); updateHeader(); };
+  document.getElementById('reset').onclick = ()=> {
+    model.time=0; model.running=false; model.stage=1;
+    model.teams.forEach(t=>{ t.points=0; t.laps=0; });
+    updateAll();
+  };
+
+  // ====== ЛУП ТОЛЬКО ДЛЯ ТАЙМЕРА (позиции считаются по очкам мгновенно) ======
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(1,(now-last)/1000); last=now;
+    if(model.running){
+      model.time = Math.min(model.duration, model.time + dt);
+      if(model.time>=model.duration) model.running=false;
+      updateHeader();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // INIT
+  renderLanes();
+  updateAll();
+  requestAnimationFrame(loop);
+})();
+</script>
 </body>
 </html>
