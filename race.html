@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Гоночная трасса — Тест-драйв умного помощника</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#ffffff; --panel:#f8fafc; --ink:#1e293b; --muted:#64748b; --accent:#0ea5e9;
+      --good:#16a34a; --warn:#eab308; --danger:#dc2626; --track:#e2e8f0; --lane:#38bdf8;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0; background:var(--bg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      color:var(--ink); overflow:hidden;
+    }
+
+    .wrap{display:grid; grid-template-columns: 360px 1fr; gap:16px; height:100vh; padding:16px;}
+    @media (max-width:1100px){.wrap{grid-template-columns:1fr; grid-template-rows:auto 1fr; padding:10px;}}
+
+    .panel{
+      background:var(--panel); border:1px solid #cbd5e1; border-radius:14px; padding:14px; overflow:auto;
+    }
+    .panel h1{font-size:20px; margin:0 0 8px;}
+    .sub{color:var(--muted); font-size:13px; margin-bottom:12px;}
+    .row{display:flex; gap:8px; align-items:center; margin:8px 0;}
+    .row label{flex:0 0 120px; color:var(--muted); font-size:12px;}
+    input[type="number"], input[type="text"], select{
+      width:100%; padding:8px 10px; border-radius:10px; border:1px solid #cbd5e1;
+      background:#fff; color:var(--ink);
+    }
+    .btn{
+      padding:8px 12px; border-radius:999px; border:1px solid #cbd5e1;
+      background:#fff; color:var(--ink); cursor:pointer; transition:all .2s ease;
+    }
+    .btn:hover{background:#f1f5f9;}
+    .btn.primary{background:var(--accent); color:#fff; border:none; font-weight:700;}
+    .btn.warn{color:var(--warn);}
+    .btn.danger{color:var(--danger);}
+    .chips{display:flex; flex-wrap:wrap; gap:6px;}
+    .chip{border:1px dashed #cbd5e1; padding:6px 10px; border-radius:999px; color:var(--muted); font-size:12px;}
+
+    .table{width:100%; border-collapse:collapse; margin-top:8px; font-size:14px;}
+    .table th,.table td{border-bottom:1px solid #e2e8f0; padding:8px; text-align:left;}
+    .team-dot{display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:8px; vertical-align:-2px;}
+    .small{font-size:12px; color:var(--muted);}
+    .timer{font-variant-numeric:tabular-nums; font-weight:800; font-size:28px; letter-spacing:1px;
+      padding:6px 12px; border-radius:10px; background:#f8fafc; border:1px solid #cbd5e1; display:inline-block;}
+    .stage{padding:6px 10px; border-radius:999px; background:#f1f5f9; border:1px solid #cbd5e1; color:var(--ink); font-size:12px;}
+
+    .stage-wrap{position:relative; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;}
+    .hud{position:absolute; inset:12px 12px auto auto; display:flex; gap:8px; align-items:center; z-index:5;}
+    .legend{position:absolute; left:12px; bottom:12px; display:flex; gap:8px; flex-wrap:wrap; z-index:5;
+      background:rgba(255,255,255,.8); border:1px solid #e2e8f0; padding:8px 10px; border-radius:12px;}
+    .label{position:absolute; transform:translate(-50%, -140%); background:rgba(255,255,255,.9); border:1px solid #cbd5e1;
+      padding:4px 8px; border-radius:8px; font-size:12px; white-space:nowrap; pointer-events:none;}
+
+    .checkpoint{stroke:#1e3a8a; stroke-width:2; fill:#93c5fd; opacity:.9;}
+    .checkpoint text{font-size:12px; fill:#1e3a8a; font-weight:700;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel" id="panel">
+      <h1>Гоночная трасса — Табло ведущего</h1>
+      <div class="sub">Светлая версия. На трассе 7 болидов и 4 контрольные точки.</div>
+
+      <div class="row"><label>Лимит очков</label><input type="number" id="limit" min="10" step="5" value="60"/></div>
+      <div class="row"><label>Таймер (мин)</label><input type="number" id="minutes" min="1" max="60" value="10"/></div>
+
+      <div class="row">
+        <button class="btn primary" id="startTimer">Старт</button>
+        <button class="btn" id="pauseTimer">Пауза</button>
+        <button class="btn warn" id="resetTimer">Сброс</button>
+        <span class="timer" id="timer">10:00</span>
+        <span class="stage" id="stageTag">Заезд 1</span>
+      </div>
+
+      <table class="table" id="board"><thead><tr><th>Команда</th><th>Очки</th><th>Управление</th></tr></thead><tbody></tbody></table>
+    </aside>
+
+    <main class="stage-wrap">
+      <div class="hud">
+        <span class="stage" id="hudStage">Заезд 1</span>
+      </div>
+
+      <svg class="track-wrap" id="svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+
+        <!-- Светлая трасса -->
+        <path id="trackPath" d="M 200 100 
+                                 C 350 60, 850 60, 1000 100
+                                 C 1130 180, 1130 520, 1000 600
+                                 C 850 640, 350 640, 200 600
+                                 C 70 520, 70 180, 200 100 Z"
+              fill="none" stroke="#94a3b8" stroke-width="20" stroke-linecap="round" />
+
+        <!-- Четыре точки-прогресса -->
+        <g class="checkpoint"><circle cx="300" cy="80" r="10"/><text x="295" y="85">1</text></g>
+        <g class="checkpoint"><circle cx="1050" cy="150" r="10"/><text x="1045" y="155">2</text></g>
+        <g class="checkpoint"><circle cx="950" cy="620" r="10"/><text x="945" y="625">3</text></g>
+        <g class="checkpoint"><circle cx="250" cy="580" r="10"/><text x="245" y="585">4</text></g>
+
+        <g id="carsLayer"></g>
+      </svg>
+
+      <div class="legend" id="legend"></div>
+    </main>
+  </div>
+
+  <script>
+    const TEAMS=[
+      {name:"Команда A",color:"#38bdf8"},
+      {name:"Команда B",color:"#22c55e"},
+      {name:"Команда C",color:"#f59e0b"},
+      {name:"Команда D",color:"#e879f9"},
+      {name:"Команда E",color:"#60a5fa"},
+      {name:"Команда F",color:"#f97316"},
+      {name:"Команда G",color:"#f43f5e"}
+    ];
+    const state={teams:TEAMS.map((t,i)=>({id:i,...t,score:0})),limit:60};
+
+    const $=s=>document.querySelector(s);const svg=$("#svg");const board=$("#board tbody");const legend=$("#legend");
+    const carsLayer=$("#carsLayer");const trackPath=$("#trackPath");let pathLength;
+
+    function buildLegend(){
+      legend.innerHTML="";state.teams.forEach(t=>{const el=document.createElement("div");el.className="chip";el.innerHTML=`<span class="team-dot" style="background:${t.color}"></span>${t.name}`;legend.appendChild(el);});
+    }
+    function buildBoard(){
+      board.innerHTML="";state.teams.forEach(t=>{
+        const tr=document.createElement("tr");
+        tr.innerHTML=`<td><span class="team-dot" style="background:${t.color}"></span>${t.name}</td><td id="score-${t.id}">0</td><td>
+        <button class="btn" onclick="addScore(${t.id},5)">+5</button></td>`;
+        board.appendChild(tr);
+      });
+    }
+    function buildCars(){
+      carsLayer.innerHTML="";state.teams.forEach(t=>{
+        const g=document.createElementNS("http://www.w3.org/2000/svg","g");g.setAttribute("data-id",t.id);
+        g.innerHTML=`<rect x="-12" y="-6" width="24" height="12" rx="3" fill="${t.color}" stroke="#1e293b"/>`;
+        carsLayer.appendChild(g);
+      });
+    }
+    function initPath(){pathLength=trackPath.getTotalLength();}
+    function percent(s,l){return Math.min(s/l,1);}
+    function placeCar(id,p){
+      const pt=trackPath.getPointAtLength(p*pathLength);
+      const car=carsLayer.querySelector(`g[data-id='${id}']`);
+      if(car)car.setAttribute("transform",`translate(${pt.x},${pt.y})`);
+    }
+    function addScore(id,val){
+      const t=state.teams[id];t.score+=val;$("#score-"+id).textContent=t.score;placeCar(id,percent(t.score,state.limit));
+    }
+    function init(){initPath();buildLegend();buildBoard();buildCars();state.teams.forEach(t=>placeCar(t.id,0));}
+    init();
+  </script>
+</body>
+</html>
