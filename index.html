@@ -1,226 +1,213 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Simple Race — 7 Teams</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Гоночная сессия — прогресс по командам</title>
 <style>
-  :root {
-    --line:#e5e7eb; --bg:#ffffff; --text:#111827; --muted:#6b7280; --accent:#2563eb;
-    --lane:#f9fafb; --track:#1f3346; --pit:#fef3c7; --pitb:#f59e0b;
-  }
-  *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
-  header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;z-index:5}
-  header .row{display:flex;gap:16px;align-items:center;justify-content:space-between}
-  .controls button{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
-  .controls button:hover{border-color:var(--accent)}
-  main{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:16px}
-  @media(max-width:960px){main{grid-template-columns:1fr}}
-  /* Трек + дорожки */
-  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
-  .track{position:relative; padding:10px 10px 6px 10px}
-  .lane{position:relative;height:58px;margin:10px 0;background:var(--lane);border:1px dashed var(--line);border-radius:12px;overflow:hidden}
-  .lane-label{position:absolute;left:8px;top:8px;font-weight:600;color:var(--text);font-size:14px}
-  .lane .car{position:absolute;left:0;top:50%;transform:translate(-50%,-50%); /* -50% чтобы «нос» ровнялся по прогрессу */
-             display:flex;align-items:center;gap:6px;transition:left 300ms linear}
-  .car .icon{width:36px;height:24px;border-radius:4px;display:inline-block}
-  .car .num{position:absolute;left:10px;top:3px;color:#fff;font-weight:700;font-size:12px;text-shadow:0 1px 1px rgba(0,0,0,.4)}
-  .car .meta{font-size:12px;color:var(--muted)}
-  .pit{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:60px;height:36px;background:var(--pit);
-       border:2px solid var(--pitb);border-radius:8px;opacity:.85}
-  /* Этапы */
-  .stages{display:flex;gap:6px;align-items:center}
-  .stage-dot{width:12px;height:12px;border-radius:50%;background:#e5e7eb}
-  .stage-dot.active{background:#10b981}
-  /* Лидерборд */
-  aside.panel h3{margin:8px 0 10px}
-  .leader{list-style:none;margin:0;padding:0}
-  .leader li{display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px dashed var(--line)}
-  .badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;font-size:12px;margin-right:6px}
-  .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
-  .quick button{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
-  .quick button:hover{border-color:var(--accent)}
-  .muted{color:var(--muted)}
-  /* Пит-стоп эффект */
-  @keyframes pitPulse{0%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.08)}100%{transform:translate(-50%,-50%) scale(1)}}
-  .car.pit{animation:pitPulse 700ms ease-in-out}
+:root{
+  --card:#f7f8fb; --text:#0f172a; --muted:#475569; --line:#e2e8f0; --accent:#d61f1f; --shadow:0 6px 18px rgba(15,23,42,.08);
+  --c1:#e11d48; --c2:#16a34a; --c3:#2563eb; --c4:#7c3aed; --c5:#ea580c; --c6:#db2777; --c7:#0891b2;
+  --row-gap:10px; --row-pad-v:12px; /* вертикальные внутренние отступы chart-row */
+}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#fff,#fafbff 55%,#f5f7fb);color:var(--text);font:500 16px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial}
+.wrap{max-width:1200px;margin:16px auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.header h1{margin:0;font-size:20px}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+button{background:#fff;border:1px solid #dbe3ee;color:var(--text);border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;transition:.15s}
+button:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(15,23,42,.06)}
+button.primary{background:#d61f1f;border-color:#c11212;color:#fff}
+.small{padding:6px 10px;border-radius:10px;font-size:12px}
+
+/* Лэйаут: левая 1/3, правая 2/3 */
+.grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;padding:12px}
+@media(max-width:960px){.grid{grid-template-columns:1fr}}
+
+/* Шапка этапа */
+.flag{display:flex;gap:10px;align-items:center;background:#ffffff;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.stage-pill{padding:4px 10px;border-radius:999px;background:#eef2ff;border:1px solid #dbe3ff}
+.stage-pill strong{color:#1d4ed8}
+.timer{font-variant-numeric:tabular-nums;font-size:20px}
+
+/* Таблица слева */
+.badge{width:14px;height:14px;border-radius:50%;border:2px solid #ffffffb3;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.table{width:100%;border-collapse:separate;border-spacing:0 var(--row-gap)}
+.table thead th{font-size:12px;color:var(--muted);text-align:left;padding:0 8px}
+.row{display:grid;grid-template-columns:minmax(120px,1fr) 48px 1fr;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
+.name{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.pos{text-align:center;font-variant-numeric:tabular-nums;font-weight:700}
+.progressCell{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:10px}
+.btns{display:grid;grid-template-columns:repeat(2, max-content);gap:6px} /* 2 в ряд */
+.btns .small{padding:4px 8px;border-radius:8px}
+.pbar{height:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;overflow:hidden}
+.pbar>span{display:block;height:100%;width:0;transition:width .5s ease}
+
+/* Правая колонка */
+.stagePanel{padding:12px}
+.chart-header{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:0 12px;display:flex;align-items:center;font-weight:800}
+.chart-header h2{margin:0;font-size:18px}
+.chart{margin-top:var(--row-gap)}
+.chart-row{display:flex;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:var(--row-pad-v) 12px;margin-bottom:var(--row-gap)}
+.chart-row:last-child{margin-bottom:0}
+.meter{position:relative;flex:1;height:14px;background:#eef2f7;border:1px solid #e2e8f0;border-radius:999px;overflow:hidden}
+.meter>span{display:block;height:100%;width:0;transition:width .5s ease}
+.val{margin-left:10px;min-width:34px;text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+
+/* Прочее */
+.footer{padding:10px 12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hidden{display:none}
+.bonus{position:absolute;pointer-events:none;font-size:22px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))}
+.container-relative{position:relative}
+#bonusLayer{position:absolute;inset:0;pointer-events:none}
 </style>
 </head>
 <body>
-<header>
-  <div class="row">
-    <div style="display:flex;gap:16px;align-items:center">
-      <div><strong>Сессия:</strong> <span id="t-session">60:00</span></div>
-      <div class="stages"><strong style="margin-right:6px">Этап:</strong>
-        <div id="s1" class="stage-dot active"></div>
-        <div id="s2" class="stage-dot"></div>
-        <div id="s3" class="stage-dot"></div>
-        <div id="s4" class="stage-dot"></div>
+<div class="wrap card">
+  <div class="header">
+    <h1>Гоночная сессия • 7 команд</h1>
+    <div class="flag">
+      <span class="stage-pill">Этап: <strong id="stageName">СТАРТ</strong></span>
+      <span class="timer" id="timer">05:00</span>
+      <div class="controls">
+        <button id="btnStart" class="primary">Старт</button>
+        <button id="btnPause">Пауза</button>
+        <button id="btnNext" class="small">Следующий этап</button>
+        <button id="btnUndo" class="small">Отмена</button>
+        <button id="btnHard" class="small">Чистый сброс</button>
       </div>
     </div>
-    <div class="controls">
-      <button id="start">▶ Старт</button>
-      <button id="pause">⏸ Пауза</button>
-      <button id="next">⏭ Следующий этап</button>
-      <button id="reset">🔄 Сброс</button>
+  </div>
+
+  <div class="grid">
+    <!-- Левая колонка (1/3): Команда | # | Прогресс -->
+    <div class="section card container-relative">
+      <table class="table" aria-live="polite">
+        <thead><tr><th>Команда</th><th>#</th><th>Прогресс</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="bonusLayer"></div>
+    </div>
+
+    <!-- Правая колонка (2/3): Заголовок этапа + бары на всю высоту строки -->
+    <div class="stagePanel card">
+      <div id="chartHeader" class="chart-header"><h2 id="stageTitle">СТАРТ</h2></div>
+      <div id="stageChart" class="chart"></div>
     </div>
   </div>
-</header>
 
-<main>
-  <section class="panel">
-    <h3 style="margin:0 0 8px">Трасса</h3>
-    <div class="track" id="track">
-      <!-- 7 дорожек генерируются скриптом -->
-    </div>
-    <div class="muted" style="font-size:12px;margin-top:6px">Подсказка: клик по болиду = пит-стоп (+10)</div>
-  </section>
-
-  <aside class="panel">
-    <h3>Лидерборд</h3>
-    <ol id="leader" class="leader"></ol>
-    <div class="quick">
-      <button data-team="1">+5 T1</button><button data-team="2">+5 T2</button><button data-team="3">+5 T3</button>
-      <button data-team="4">+5 T4</button><button data-team="5">+5 T5</button><button data-team="6">+5 T6</button>
-      <button data-team="7">+5 T7</button>
-    </div>
-    <p class="muted" style="margin-top:8px">Очки → позиция на дорожке. Дошёл до 100% — полный круг, счётчик «laps» растёт.</p>
-  </aside>
-</main>
+  <div class="footer"><div class="note">© Формула обучения — лёгкий старт, честный финиш.</div></div>
+</div>
 
 <script>
-(function(){
-  // ====== ДАННЫЕ ======
-  const model = {
-    duration: 60*60,    // 60 минут
-    time: 0,            // секунды
-    running: false,
-    stage: 1,
-    stages: 4,
-    maxPointsPerLap: 100,  // 100 очков = полный круг
-    teams: [
-      {id:1,name:'Team 1',color:'#ef4444',points:0,laps:0},
-      {id:2,name:'Team 2',color:'#2563eb',points:0,laps:0},
-      {id:3,name:'Team 3',color:'#10b981',points:0,laps:0},
-      {id:4,name:'Team 4',color:'#f59e0b',points:0,laps:0},
-      {id:5,name:'Team 5',color:'#8b5cf6',points:0,laps:0},
-      {id:6,name:'Team 6',color:'#14b8a6',points:0,laps:0},
-      {id:7,name:'Team 7',color:'#e11d48',points:0,laps:0},
-    ],
-  };
+(()=>{"use strict";
+/* === Конфигурация/состояние === */
+const STORAGE_KEY="race_bars_state_clean_1";
+const COLORS=["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)","var(--c6)","var(--c7)"];
+const TEAM_NAMES=["Ferrum","Aquila","Volt","Nebula","Ignite","Blossom","Glacier"];
+const STAGES=[{name:"СТАРТ",sec:300},{name:"ЗАЕЗД 1",sec:600},{name:"ЗАЕЗД 2",sec:900},{name:"ЗАЕЗД 3",sec:1200},{name:"ЗАЕЗД 4",sec:300},{name:"ФИНИШ",sec:300}];
 
-  // ====== РЕНДЕР ДОРОЖЕК ======
-  const track = document.getElementById('track');
-  function renderLanes(){
-    track.innerHTML = '';
-    model.teams.forEach(t=>{
-      const lane = document.createElement('div'); lane.className='lane'; lane.dataset.team=t.id;
-      const label = document.createElement('div'); label.className='lane-label'; label.innerHTML =
-        `<span class="badge" style="background:${t.color}">${t.id}</span> ${t.name}`;
-      const pit = document.createElement('div'); pit.className='pit';
-      const car = document.createElement('div'); car.className='car'; car.dataset.team=t.id;
-      const icon = document.createElement('span'); icon.className='icon'; icon.style.background=t.color;
-      const num = document.createElement('span'); num.className='num'; num.textContent=t.id;
-      const meta = document.createElement('span'); meta.className='meta'; meta.textContent='0 pts • 0 laps';
-      car.appendChild(icon); car.appendChild(num); car.appendChild(meta);
-      // клик по болиду = пит-стоп бонус
-      car.addEventListener('click', ()=>{ addPoints(t.id, 10); pitEffect(t.id); });
+const $=s=>document.querySelector(s);
+const tbody=$("#tbody"), stageName=$("#stageName"), timerEl=$("#timer");
+const btnStart=$("#btnStart"), btnPause=$("#btnPause"), btnNext=$("#btnNext"), btnUndo=$("#btnUndo"), btnHard=$("#btnHard");
+const stageChart=$("#stageChart"), chartHeader=$("#chartHeader"), stageTitle=$("#stageTitle"), bonusLayer=$("#bonusLayer");
 
-      lane.appendChild(label); lane.appendChild(pit); lane.appendChild(car);
-      track.appendChild(lane);
+function fresh(){return{teams:TEAM_NAMES.map((n,i)=>({id:i,name:n,color:COLORS[i],pts:0})),stage:0,remain:STAGES[0].sec,history:[]}}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!d||!Array.isArray(d.teams)||d.teams.length!==TEAM_NAMES.length)return fresh();d.teams=d.teams.map((t,i)=>({id:i,name:TEAM_NAMES[i],color:COLORS[i],pts:Number(t?.pts)||0}));if(typeof d.stage!=="number")d.stage=0;if(typeof d.remain!=="number")d.remain=STAGES[d.stage].sec;if(!Array.isArray(d.history))d.history=[];return d}catch{return fresh()}}
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+let state=load(); let running=false,last=performance.now();
+const fmt=s=>{s=Math.max(0,s|0);return String((s/60|0)).padStart(2,"0")+":"+String(s%60|0).padStart(2,"0")};
+const sorted=()=>[...state.teams].sort((a,b)=>b.pts-a.pts);
+function beep(f=880,d=120){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.type="square";o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},d)}catch{}}
+function stageBeep(){beep(660,120);setTimeout(()=>beep(880,150),160);setTimeout(()=>beep(520,180),360)}
+
+/* === Рендер слева (без колонки очков) === */
+function updateBoard(){
+  const s=sorted(); const leader=Math.max(1,...s.map(t=>t.pts),1);
+  tbody.innerHTML="";
+  s.forEach((t,idx)=>{
+    const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=3; td.style.padding="0";
+    const row=document.createElement("div"); row.className="row";
+    const name=document.createElement("div"); name.className="name";
+    const dot=document.createElement("span"); dot.className="badge"; dot.style.background=t.color;
+    name.append(dot,document.createTextNode(t.name));
+    const pos=document.createElement("div"); pos.className="pos"; pos.textContent=idx+1;
+    const cell=document.createElement("div"); cell.className="progressCell";
+    const btns=document.createElement("div"); btns.className="btns";
+    ["+1","+5","+10","+15"].forEach(v=>{const b=document.createElement("button"); b.className="small"; b.textContent=v;
+      b.onclick=()=>{add(t.id,parseInt(v)); spark(row, v==="+15"?"🟡":(v==="+10"?"⚡":(v==="+5"?"✨":"➕")));};
+      btns.appendChild(b);
     });
-  }
-
-  // ====== ОБНОВЛЕНИЕ ПОЗИЦИЙ ======
-  function setCarPosition(team){
-    const lane = track.querySelector(`.lane[data-team="${team.id}"]`);
-    const car  = lane.querySelector('.car');
-    const pct  = (team.points % model.maxPointsPerLap) / model.maxPointsPerLap * 100; // 0..100
-    car.style.left = pct + '%';
-    const laps = Math.floor(team.points / model.maxPointsPerLap);
-    team.laps = laps;
-    lane.querySelector('.meta').textContent = `${team.points} pts • ${team.laps} laps`;
-  }
-  function updateAll(){
-    model.teams.forEach(setCarPosition);
-    renderLeaderboard();
-    updateHeader();
-  }
-
-  // ====== ЛИДЕРБОРД ======
-  const leader = document.getElementById('leader');
-  function renderLeaderboard(){
-    const sorted = [...model.teams].sort((a,b)=>{
-      // сортируем по общему прогрессу: laps*100 + остаток
-      const ap = a.laps*100 + (a.points % model.maxPointsPerLap);
-      const bp = b.laps*100 + (b.points % model.maxPointsPerLap);
-      return bp - ap;
-    });
-    leader.innerHTML = '';
-    sorted.forEach((t, i)=>{
-      const li = document.createElement('li');
-      li.innerHTML = `<span><span class="badge" style="background:${t.color}">${i+1}</span> <strong>${t.name}</strong></span>
-                      <span>${t.points} pts</span>`;
-      leader.appendChild(li);
-    });
-  }
-
-  // ====== ВРЕМЯ/ЭТАПЫ ======
-  const tEl = document.getElementById('t-session');
-  function updateHeader(){
-    const remain = Math.max(0, model.duration - Math.floor(model.time));
-    const mm = String(Math.floor(remain/60)).padStart(2,'0');
-    const ss = String(remain%60).padStart(2,'0');
-    tEl.textContent = `${mm}:${ss}`;
-    for(let i=1;i<=model.stages;i++){
-      const el = document.getElementById('s'+i);
-      if(!el) continue;
-      el.classList.toggle('active', i<=model.stage);
-    }
-  }
-
-  // ====== ОЧКИ / ДЕЙСТВИЯ ======
-  function addPoints(teamId, delta){
-    const t = model.teams.find(x=>x.id===teamId); if(!t) return;
-    t.points = Math.max(0, t.points + delta);
-    setCarPosition(t); renderLeaderboard();
-  }
-  function pitEffect(teamId){
-    const car = track.querySelector(`.lane[data-team="${teamId}"] .car`);
-    car.classList.remove('pit'); void car.offsetWidth; car.classList.add('pit');
-  }
-
-  // Быстрые +5
-  document.querySelectorAll('.quick button').forEach(b=>{
-    b.addEventListener('click', ()=> addPoints(+b.dataset.team, 5));
+    const pbar=document.createElement("div"); pbar.className="pbar"; const fill=document.createElement("span");
+    fill.style.background=t.color; fill.style.width=(t.pts/leader*100).toFixed(1)+"%"; pbar.appendChild(fill);
+    cell.append(btns,pbar);
+    row.append(name,pos,cell); td.appendChild(row); tr.appendChild(td); tbody.appendChild(tr);
   });
+}
 
-  // Контролы
-  document.getElementById('start').onclick = ()=> model.running = true;
-  document.getElementById('pause').onclick = ()=> model.running = false;
-  document.getElementById('next').onclick  = ()=> { model.stage = Math.min(model.stages, model.stage+1); updateHeader(); };
-  document.getElementById('reset').onclick = ()=> {
-    model.time=0; model.running=false; model.stage=1;
-    model.teams.forEach(t=>{ t.points=0; t.laps=0; });
-    updateAll();
-  };
+/* === Правая колонка: заголовок этапа + бары на всю высоту строки === */
+function updateChart(){
+  stageTitle.textContent=STAGES[state.stage].name;
+  const s=sorted(); const leader=Math.max(1,...s.map(t=>t.pts),1);
+  stageChart.innerHTML="";
+  s.forEach(t=>{
+    const row=document.createElement("div"); row.className="chart-row";
+    const m=document.createElement("div"); m.className="meter"; const f=document.createElement("span");
+    f.style.background=t.color; f.style.width=(t.pts/leader*100).toFixed(1)+"%"; m.appendChild(f);
+    const v=document.createElement("div"); v.className="val"; v.textContent=t.pts; // очки только справа
+    row.append(m,v); stageChart.appendChild(row);
+  });
+  syncHeaderHeight(); syncRowHeights();
+}
 
-  // ====== ЛУП ТОЛЬКО ДЛЯ ТАЙМЕРА (позиции считаются по очкам мгновенно) ======
-  let last = performance.now();
-  function loop(now){
-    const dt = Math.min(1,(now-last)/1000); last=now;
-    if(model.running){
-      model.time = Math.min(model.duration, model.time + dt);
-      if(model.time>=model.duration) model.running=false;
-      updateHeader();
-    }
-    requestAnimationFrame(loop);
-  }
+/* === Синхронизация высот === */
+function syncHeaderHeight(){
+  const thead=document.querySelector(".table thead");
+  const h=thead?thead.getBoundingClientRect().height:0;
+  chartHeader.style.height=h+"px";
+}
+function syncRowHeights(){
+  const left=[...document.querySelectorAll("#tbody .row")];
+  const right=[...document.querySelectorAll("#stageChart .chart-row")];
+  const padV=parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-pad-v"))||12;
+  right.forEach((r,i)=>{
+    const lh=left[i]?.offsetHeight||56;
+    r.style.height=lh+"px";
+    const meter=r.querySelector(".meter");
+    meter.style.height=Math.max(10, lh - padV*2) + "px";  // бар на всю строку (минус внутренние отступы)
+    meter.style.borderRadius= (lh/2) + "px";
+  });
+}
 
-  // INIT
-  renderLanes();
-  updateAll();
-  requestAnimationFrame(loop);
+/* === Эффект бонуса === */
+function spark(host,emoji){
+  const r=host.getBoundingClientRect(), h=bonusLayer.getBoundingClientRect();
+  const b=document.createElement("div"); b.className="bonus"; b.textContent=emoji;
+  b.style.left=(r.left-h.left+r.width-60)+"px"; b.style.top=(r.top-h.top-8)+"px";
+  bonusLayer.appendChild(b);
+  b.animate([{transform:"translateY(0)",opacity:1},{transform:"translateY(-26px)",opacity:0}],{duration:650,easing:"ease-out"}).onfinish=()=>b.remove();
+}
+
+/* === Логика / таймер / управление === */
+function add(id,d){const t=state.teams.find(x=>x.id===id); if(!t) return; t.pts+=d; state.history.push({ts:Date.now(),id,delta:d,stage:state.stage}); save(); render();}
+function undo(){ // отмена последнего начисления
+  const h=state.history.pop(); if(!h){return;}
+  const t=state.teams.find(x=>x.id===h.id); if(t){ t.pts=Math.max(0, t.pts - h.delta); }
+  save(); render();
+}
+function next(){if(state.stage<STAGES.length-1){state.stage++;state.remain=STAGES[state.stage].sec;running=false;document.getElementById("btnStart").disabled=false;stageBeep();save();render();}}
+function hard(){if(confirm("Обнулить все результаты и перезапустить?")){localStorage.removeItem(STORAGE_KEY);location.reload();}}
+
+let tickLast=performance.now();
+function tick(now){if(!running)return; if(now-tickLast>=1000){state.remain--; tickLast=now; timerEl.textContent=fmt(state.remain); if(state.remain<=3&&state.remain>0) beep(900,90); if(state.remain<=0){stageBeep(); running=false; document.getElementById("btnStart").disabled=false;} save();} requestAnimationFrame(tick);}
+function start(){ if(STAGES[state.stage].name==="ФИНИШ")return; running=true; document.getElementById("btnStart").disabled=true; tickLast=performance.now(); requestAnimationFrame(tick);}
+function pause(){ running=false; document.getElementById("btnStart").disabled=false;}
+
+/* === Композитный рендер/инициализация === */
+function render(){ stageName.textContent=STAGES[state.stage].name; timerEl.textContent=fmt(state.remain); updateBoard(); updateChart(); }
+function boot(){ render(); btnStart.onclick=start; btnPause.onclick=pause; btnNext.onclick=next; btnUndo.onclick=undo; btnHard.onclick=hard; window.addEventListener("resize",()=>{syncHeaderHeight(); syncRowHeights();}); }
+document.readyState==="loading"?document.addEventListener("DOMContentLoaded",boot):boot();
 })();
 </script>
 </body>
