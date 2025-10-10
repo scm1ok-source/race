@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Race Session Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="session-info">
+      <div class="timer">
+        <strong>Сессия:</strong> <span id="session-timer">60:00</span>
+      </div>
+      <div class="stage">
+        <strong>Этап:</strong> <span id="stage-indicator">1 / 4</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="reduced-motion-toggle" />
+        <span>Упростить анимацию</span>
+      </label>
+    </div>
+    <div class="controls">
+      <button id="btn-start">▶ Старт</button>
+      <button id="btn-pause">⏸ Пауза</button>
+      <button id="btn-reset">🔄 Сброс</button>
+      <button id="btn-next-stage">⏭ Следующий этап</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="track-panel">
+      <!-- SVG Трасса с 4 контрольными точками -->
+      <svg id="track-svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="trackGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#2c3e50" />
+            <stop offset="100%" stop-color="#34495e" />
+          </linearGradient>
+          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+          </filter>
+        </defs>
+
+        <!-- Овальная трасса (параметрический путь) -->
+        <path id="trackPath"
+              d="M 150 300
+                 C 150 150, 1050 150, 1050 300
+                 C 1050 450, 150 450, 150 300 Z"
+              fill="none"
+              stroke="url(#trackGrad)"
+              stroke-width="30"
+              stroke-linecap="round"
+              filter="url(#shadow)" />
+
+        <!-- Контрольные точки этапов (1-4) -->
+        <g id="stage-markers"></g>
+
+        <!-- Пит-стоп зоны (слева и справа) -->
+        <g id="pit-zones">
+          <rect class="pit-zone" x="80" y="240" width="120" height="120" rx="10"/>
+          <rect class="pit-zone" x="1000" y="240" width="120" height="120" rx="10"/>
+        </g>
+
+        <!-- Слой болидов -->
+        <g id="cars-layer"></g>
+      </svg>
+
+      <!-- Зона карточек лицензий (Drag-and-Drop заглушка) -->
+      <div class="licenses">
+        <div class="license" draggable="true" data-type="tires">Лицензия: Шины +10</div>
+        <div class="license" draggable="true" data-type="fuel">Лицензия: Топливо +10</div>
+        <div class="license" draggable="true" data-type="goldnut">Бонус: Золотая гайка +20</div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <h3>Лидерборд</h3>
+      <ol id="leaderboard" class="leaderboard"></ol>
+
+      <h4>Технические события</h4>
+      <div id="event-log" class="event-log"></div>
+
+      <div class="quick-actions">
+        <button data-team="1" class="add-points">+5 Team 1</button>
+        <button data-team="2" class="add-points">+5 Team 2</button>
+        <button data-team="3" class="add-points">+5 Team 3</button>
+        <button data-team="4" class="add-points">+5 Team 4</button>
+        <button data-team="5" class="add-points">+5 Team 5</button>
+        <button data-team="6" class="add-points">+5 Team 6</button>
+        <button data-team="7" class="add-points">+5 Team 7</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <small>Race Session Dashboard • v1 • Vanilla JS</small>
+  </footer>
+
+  <!-- Точка входа ES-модулей -->
+  <script type="module" src="js/app.js"></script>
+  <noscript>Для работы дашборда включите JavaScript.</noscript>
+</body>
+</html>
