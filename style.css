@@ -1,0 +1,46 @@
+:root{
+  --bg:#ffffff; --text:#1f2937; --muted:#6b7280; --accent:#2563eb;
+  --panel:#f3f4f6; --line:#e5e7eb; --good:#10b981; --warn:#f59e0b; --bad:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background:var(--bg); color:var(--text);
+}
+.topbar{
+  display:flex; justify-content:space-between; align-items:center; gap:16px;
+  padding:12px 16px; border-bottom:1px solid var(--line); background:#fff; position:sticky; top:0; z-index:5;
+}
+.session-info{display:flex; gap:20px; align-items:center}
+.controls{display:flex; gap:8px}
+.controls button{padding:8px 12px; border:1px solid var(--line); background:#fff; border-radius:10px; cursor:pointer}
+.controls button:hover{border-color:var(--accent)}
+.toggle{display:flex; gap:8px; align-items:center; color:var(--muted)}
+
+.layout{display:grid; grid-template-columns:1fr 320px; gap:16px; padding:16px}
+.track-panel{background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; position:relative}
+#track-svg{width:100%; height:auto; display:block}
+.pit-zone{fill:#fef3c7; stroke:#f59e0b; stroke-width:2; opacity:.7}
+
+.licenses{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+.license{padding:8px 10px; background:#eef2ff; border:1px dashed #6366f1; border-radius:10px; cursor:grab; user-select:none}
+.license:active{cursor:grabbing}
+
+.sidebar{background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; height:fit-content; position:sticky; top:72px}
+.leaderboard{list-style:none; margin:0; padding:0}
+.leaderboard li{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px; border-bottom:1px dashed var(--line)}
+.leaderboard .badge{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; color:#fff; font-weight:700; font-size:12px}
+
+.event-log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; background:var(--panel); border:1px solid var(--line); padding:8px; border-radius:10px; max-height:200px; overflow:auto}
+.quick-actions{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px}
+.quick-actions button{padding:6px 8px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer}
+.quick-actions button:hover{border-color:var(--accent)}
+
+.footer{padding:10px 16px; color:var(--muted); border-top:1px solid var(--line); margin-top:12px}
+
+/* Адаптив */
+@media (max-width: 960px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:relative; top:auto}
+}
