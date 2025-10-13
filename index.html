@@ -37,9 +37,12 @@ button.primary{background:#d61f1f;border-color:#c11212;color:#fff}
 .table thead th{font-size:12px;color:var(--muted);text-align:left;padding:0 8px}
 .row{display:grid;grid-template-columns:minmax(120px,1fr) 48px 1fr;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
 .name{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.name .title{padding:2px 4px;border-radius:6px}
+.name .edit{border:1px dashed #cbd5e1;background:#fff;padding:2px 6px;border-radius:8px;font-size:12px;cursor:text;min-width:48px}
+.editBtn{margin-left:6px;border-radius:8px;padding:4px 8px;font-size:12px}
 .pos{text-align:center;font-weight:700}
 
-/* Колонка «Прогресс» — ТОЛЬКО кнопки, без дорожки */
+/* только кнопки в колонке Прогресс */
 .progressCell{display:flex;flex-wrap:wrap;gap:6px}
 .btns{display:grid;grid-template-columns:repeat(2, max-content);gap:6px}
 .btns .small{padding:4px 8px;border-radius:8px}
@@ -81,7 +84,7 @@ button.primary{background:#d61f1f;border-color:#c11212;color:#fff}
   </div>
 
   <div class="grid">
-    <!-- Левая колонка: Команда | # | Прогресс (только кнопки) -->
+    <!-- Левая колонка -->
     <div class="section card container-relative">
       <table class="table" aria-live="polite">
         <thead><tr><th>Команда</th><th>#</th><th>Прогресс</th></tr></thead>
@@ -90,7 +93,7 @@ button.primary{background:#d61f1f;border-color:#c11212;color:#fff}
       <div id="bonusLayer"></div>
     </div>
 
-    <!-- Правая колонка: заголовок этапа (без подложки) + гистограммы -->
+    <!-- Правая колонка -->
     <div class="stagePanel card">
       <div id="chartHeader" class="chart-header"><h2 id="stageTitle">СТАРТ</h2></div>
       <div id="stageChart" class="chart"></div>
@@ -104,7 +107,7 @@ button.primary{background:#d61f1f;border-color:#c11212;color:#fff}
 (()=>{"use strict";
 const STORAGE_KEY="race_bars_state_clean_1";
 const COLORS=["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)","var(--c6)","var(--c7)"];
-const TEAM_NAMES=["Ferrum","Aquila","Volt","Nebula","Ignite","Blossom","Glacier"];
+const DEFAULT_NAMES=["Ferrum","Aquila","Volt","Nebula","Ignite","Blossom","Glacier"];
 const STAGES=[{name:"СТАРТ",sec:300},{name:"ЗАЕЗД 1",sec:600},{name:"ЗАЕЗД 2",sec:900},{name:"ЗАЕЗД 3",sec:1200},{name:"ЗАЕЗД 4",sec:300},{name:"ФИНИШ",sec:300}];
 
 const $=s=>document.querySelector(s);
@@ -112,25 +115,73 @@ const tbody=$("#tbody"), stageName=$("#stageName"), timerEl=$("#timer");
 const btnStart=$("#btnStart"), btnPause=$("#btnPause"), btnNext=$("#btnNext"), btnUndo=$("#btnUndo"), btnHard=$("#btnHard");
 const stageChart=$("#stageChart"), chartHeader=$("#chartHeader"), stageTitle=$("#stageTitle"), bonusLayer=$("#bonusLayer");
 
-function fresh(){return{teams:TEAM_NAMES.map((n,i)=>({id:i,name:n,color:COLORS[i],pts:0})),stage:0,remain:STAGES[0].sec,history:[]}}
-function load(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!d||!Array.isArray(d.teams)||d.teams.length!==TEAM_NAMES.length)return fresh();d.teams=d.teams.map((t,i)=>({id:i,name:TEAM_NAMES[i],color:COLORS[i],pts:Number(t?.pts)||0}));if(typeof d.stage!=="number")d.stage=0;if(typeof d.remain!=="number")d.remain=STAGES[d.stage].sec;if(!Array.isArray(d.history))d.history=[];return d}catch{return fresh()}}
+function fresh(){
+  return {teams:DEFAULT_NAMES.map((n,i)=>({id:i,name:n,color:COLORS[i],pts:0})),stage:0,remain:STAGES[0].sec,history:[]}
+}
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+    if(!d||!Array.isArray(d.teams)||d.teams.length!==DEFAULT_NAMES.length) return fresh();
+    d.teams=d.teams.map((t,i)=>({id:i,name:(t?.name??DEFAULT_NAMES[i]).toString().slice(0,40),color:COLORS[i],pts:Number(t?.pts)||0}));
+    if(typeof d.stage!=="number") d.stage=0;
+    if(typeof d.remain!=="number") d.remain=STAGES[d.stage].sec;
+    if(!Array.isArray(d.history)) d.history=[];
+    return d;
+  }catch{ return fresh() }
+}
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+
 let state=load(); let running=false,last=performance.now();
 const fmt=s=>{s=Math.max(0,s|0);return String((s/60|0)).padStart(2,"0")+":"+String(s%60|0).padStart(2,"0")};
 const sorted=()=>[...state.teams].sort((a,b)=>b.pts-a.pts);
 function beep(f=880,d=120){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.type="square";o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},d)}catch{}}
 function stageBeep(){beep(660,120);setTimeout(()=>beep(880,150),160);setTimeout(()=>beep(520,180),360)}
 
-/* левая таблица (прогресс = только кнопки) */
+/* === Редактор имени === */
+function attachNameEditor(container, team){
+  // клик по имени — инлайн-редактор
+  function startEdit(){
+    if(container.dataset.editing==="1") return;
+    container.dataset.editing="1";
+    const current=team.name;
+    const input=document.createElement("input");
+    input.type="text"; input.value=current; input.maxLength=40;
+    input.className="edit"; input.size=Math.max(8, current.length);
+    container.replaceChildren(container.querySelector(".badge"), input);
+    input.focus(); input.select();
+    function finish(commit){
+      container.dataset.editing="0";
+      const newName=commit ? input.value.trim() : current;
+      team.name = newName || current;
+      save(); render(); // перерисуем строку с нормальным видом
+    }
+    input.addEventListener("keydown",e=>{
+      if(e.key==="Enter") finish(true);
+      if(e.key==="Escape") finish(false);
+    });
+    input.addEventListener("blur",()=>finish(true));
+  }
+  const title=container.querySelector(".title");
+  const btn=container.querySelector(".editBtn");
+  title.addEventListener("click", startEdit);
+  title.addEventListener("dblclick", startEdit);
+  btn.addEventListener("click", startEdit);
+}
+
+/* левая таблица */
 function updateBoard(){
   const s=sorted();
   tbody.innerHTML="";
   s.forEach((t,idx)=>{
     const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=3; td.style.padding="0";
     const row=document.createElement("div"); row.className="row";
+
     const name=document.createElement("div"); name.className="name";
     const dot=document.createElement("span"); dot.className="badge"; dot.style.background=t.color;
-    name.append(dot,document.createTextNode(t.name));
+    const title=document.createElement("span"); title.className="title"; title.textContent=t.name;
+    const edit=document.createElement("button"); edit.className="small editBtn"; edit.type="button"; edit.textContent="✎";
+    name.append(dot, title, edit);
+
     const pos=document.createElement("div"); pos.className="pos"; pos.textContent=idx+1;
 
     const cell=document.createElement("div"); cell.className="progressCell";
@@ -143,6 +194,9 @@ function updateBoard(){
     cell.append(btns);
 
     row.append(name,pos,cell); td.appendChild(row); tr.appendChild(td); tbody.appendChild(tr);
+
+    // подключаем редактор
+    attachNameEditor(name, t);
   });
 }
 
