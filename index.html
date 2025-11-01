@@ -7,7 +7,13 @@
 <style>
 :root{
   --card:#f7f8fb; --text:#0f172a; --muted:#475569; --line:#e2e8f0; --accent:#d61f1f; --shadow:0 6px 18px rgba(15,23,42,.08);
-  --c1:#e11d48; --c2:#16a34a; --c3:#2563eb; --c4:#7c3aed; --c5:#ea580c; --c6:#db2777; --c7:#0891b2;
+    --c1: #ff0000; /* красный */
+  --c2: #ffd700; /* жёлтый */
+  --c3: #0066ff; /* синий */
+  --c4: #00ced1; /* бирюзовый */
+  --c5: #7fff00; /* салатовый */
+  --c6: #8b4513; /* коричневый */
+  --c7: #000000; /* чёрный */
   --row-gap:10px; --row-pad-v:12px;
 }
 *{box-sizing:border-box}
@@ -78,7 +84,7 @@ button.primary{background:#d61f1f;border-color:#c11212;color:#fff}
         <button id="btnPause">Пауза</button>
         <button id="btnNext" class="small">Следующий этап</button>
         <button id="btnUndo" class="small">Отмена</button>
-        <button id="btnHard" class="small">Сброс</button>
+        <button id="btnHard" class="small">Чистый сброс</button>
       </div>
     </div>
   </div>
@@ -107,8 +113,8 @@ button.primary{background:#d61f1f;border-color:#c11212;color:#fff}
 (()=>{"use strict";
 const STORAGE_KEY="race_bars_state_clean_1";
 const COLORS=["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)","var(--c6)","var(--c7)"];
-const DEFAULT_NAMES=["Ferrum","Aquila","Volt","Nebula","Ignite","Blossom","Glacier"];
-const STAGES=[{name:"СТАРТ",sec:300},{name:"ЗАЕЗД 1",sec:600},{name:"ЗАЕЗД 2",sec:900},{name:"ЗАЕЗД 3",sec:1200},{name:"ЗАЕЗД 4",sec:300},{name:"ФИНИШ",sec:300}];
+const DEFAULT_NAMES=["Porsche","Lamborghini","Williams","Lotus","Aston Martin","McLaren","Alfa Romeo"];
+const STAGES=[{name:"Free Practice",sec:60},{name:"Qualifying 1",sec:20},{name:"Qualifying 2",sec:10},{name:"Race",sec:480},{name:"Pit Stop",sec:120}];
 
 const $=s=>document.querySelector(s);
 const tbody=$("#tbody"), stageName=$("#stageName"), timerEl=$("#timer");
